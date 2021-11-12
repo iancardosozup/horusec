@@ -13,6 +13,7 @@
 # limitations under the License.
 
 project_name: horusec
+
 builds:
   - id: horusec
     env: [ CGO_ENABLED=0 ]
@@ -49,6 +50,8 @@ builds:
       - 386
 changelog:
   skip: true
+snapshot:
+  name_template: '{{ incpatch .Tag }}'
 archives:
   - id: horusec
     builds:
@@ -78,22 +81,6 @@ release:
   draft: true
   extra_files:
     - glob: deployments/cosign.pub
-#    - glob: ./tmp/horusec_linux_x86_stand_alone
-#    - glob: ./tmp/horusec_linux_x86_stand_alone.sig
-#    - glob: ./tmp/horusec_linux_amd64_stand_alone
-#    - glob: ./tmp/horusec_linux_amd64_stand_alone.sig
-#    - glob: ./tmp/horusec_linux_arm64_stand_alone
-#    - glob: ./tmp/horusec_linux_arm64_stand_alone.sig
-#    - glob: ./tmp/horusec_win_x86_stand_alone.exe
-#    - glob: ./tmp/horusec_win_x86_stand_alone.exe.sig
-#    - glob: ./tmp/horusec_win_amd64_stand_alone.exe
-#    - glob: ./tmp/horusec_win_amd64_stand_alone.exe.sig
-#    - glob: ./tmp/horusec_win_arm64_stand_alone.exe
-#    - glob: ./tmp/horusec_win_arm64_stand_alone.exe.sig
-#    - glob: ./tmp/horusec_mac_amd64_stand_alone
-#    - glob: ./tmp/horusec_mac_amd64_stand_alone.sig
-#    - glob: ./tmp/horusec_mac_arm64_stand_alone
-#    - glob: ./tmp/horusec_mac_arm64_stand_alone.sig
 nfpms:
   - id: horusec
     package_name: horusec
@@ -162,6 +149,7 @@ dockers:
     push_flags:
       - --tls-verify=false
 docker_manifests:
+
   - name_template: 'osodracnai/horusec-cli:{{ .Tag }}'
     image_templates:
       - 'osodracnai/horusec-cli:{{ .Tag }}-amd64'
@@ -170,7 +158,14 @@ docker_manifests:
     image_templates:
       - 'osodracnai/horusec-cli:{{ .Tag }}-amd64'
       - 'osodracnai/horusec-cli:{{ .Tag }}-arm64'
+    skip_push: auto
   - name_template: 'osodracnai/horusec-cli:v{{ .Major }}'
     image_templates:
       - 'osodracnai/horusec-cli:{{ .Tag }}-amd64'
       - 'osodracnai/horusec-cli:{{ .Tag }}-arm64'
+    skip_push: auto
+  - name_template: 'osodracnai/horusec-cli:v{{ .Major }}{{ .Minor }}'
+    image_templates:
+      - 'osodracnai/horusec-cli:{{ .Tag }}-amd64'
+      - 'osodracnai/horusec-cli:{{ .Tag }}-arm64'
+    skip_push: auto
