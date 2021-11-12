@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-name: release-beta
+name: release-rc
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +20,7 @@ on:
         required: true
 permissions: read-all
 jobs:
-  Beta:
+  RC:
     permissions:
       contents: write
       packages: write
@@ -68,7 +68,7 @@ jobs:
       - name: Install Mage
         run: go install github.com/magefile/mage@07afc7d24f4d6d6442305d49552f04fbda5ccb3e
       - name: Release
-        run: mage -v releasebeta  ${{ github.event.inputs.releaseType }}
+        run: mage -v releaserc  ${{ github.event.inputs.releaseType }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CURRENT_DATE: ${{ steps.date.outputs.date }}

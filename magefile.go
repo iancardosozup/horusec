@@ -147,7 +147,6 @@ func ReleaseRc(version string) (err error) {
 	}
 	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
 	os.Setenv("CLI_VERSION", newTag)
-	os.Setenv("GITHUB_TOKEN", os.Getenv("HORUSEC_PUSH_TOKEN"))
 	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
 }
 
@@ -163,7 +162,6 @@ func hasGoreleaser() error {
 }
 func hasAllNecessaryEnvs() error {
 	envs := map[string]string{
-		"HORUSEC_PUSH_TOKEN":  os.Getenv("HORUSEC_PUSH_TOKEN"),
 		"CURRENT_DATE":        os.Getenv("CURRENT_DATE"),
 		"COSIGN_KEY_LOCATION": os.Getenv("COSIGN_KEY_LOCATION"),
 		"COSIGN_PWD":          os.Getenv("COSIGN_PWD"),
@@ -193,6 +191,7 @@ func getLatestReleaseTag() (string, error) {
 	}
 	return strings.ReplaceAll(github.Stringify(release.TagName), `"`, ""), err
 }
+
 func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
 	if !semver.IsValid(currentTag) {
 		return "", errors.New("invalid current tag")
