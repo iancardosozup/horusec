@@ -14,7 +14,6 @@ import (
 	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
 	"golang.org/x/mod/semver"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -84,7 +83,7 @@ func ReleaseAlpha() error {
 // ReleaseBeta releases beta version
 func ReleaseBeta(version string) (err error) {
 	mg.Deps(verifyReleaseDeps)
-	tag, err := getLatestReleaseTag()
+	tag, err := getLatestReleaseTag("iancardosozup", "horusec", Beta)
 
 	if err != nil {
 		return err
@@ -116,7 +115,7 @@ func ReleaseBeta(version string) (err error) {
 // ReleaseRc creates a release branch and a release candidate tag
 func ReleaseRc(version string) (err error) {
 	mg.Deps(verifyReleaseDeps)
-	tag, err := getLatestReleaseTag()
+	tag, err := getLatestReleaseTag("iancardosozup", "horusec", Rc)
 	if err != nil {
 		return err
 	}
@@ -177,19 +176,30 @@ func hasAllNecessaryEnvs() error {
 	}
 	return nil
 }
-func getLatestReleaseTag() (string, error) {
+func getLatestReleaseTag(org, project, releasetype string) (string, error) {
+	if releasetype != Beta && releasetype != Alpha && releasetype != Rc && releasetype != Release {
+		return "", fmt.Errorf("invalid release type, choose between %q %q %q %q", Alpha, Beta, Rc, Release)
+	}
 	ghClient := github.NewClient(nil)
-	repo, resp, err := ghClient.Repositories.Get(context.Background(), "iancardosozup", "horusec")
+	listOptions := &github.ListOptions{
+		Page:    1,
+		PerPage: 80,
+	}
+	tags, resp, err := ghClient.Repositories.ListTags(context.Background(), org, project, listOptions)
 	if github.CheckResponse(resp.Response) != nil {
 		return "", err
 	}
-	req, err := http.NewRequest(http.MethodGet, strings.ReplaceAll(repo.GetReleasesURL(), `{/id}`, "/latest"), nil)
-	var release github.RepositoryRelease
-	resp, err = ghClient.Do(context.Background(), req, &release)
-	if github.CheckResponse(resp.Response) != nil {
-		return "", err
+	var latestTagName string
+	for _, tag := range tags {
+		if strings.Contains(tag.GetName(), releasetype) && releasetype != Release {
+			latestTagName = tag.GetName()
+			break
+		} else if !strings.Contains(tag.GetName(), Beta) && !strings.Contains(tag.GetName(), Alpha) && !strings.Contains(tag.GetName(), Rc) {
+			latestTagName = tag.GetName()
+			break
+		}
 	}
-	return strings.ReplaceAll(github.Stringify(release.TagName), `"`, ""), err
+	return strings.ReplaceAll(latestTagName, `"`, ""), err
 }
 
 func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
