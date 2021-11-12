@@ -22,13 +22,13 @@ import (
 )
 
 const (
-	Patch = "patch"
-	Minor = "minor"
-	Major = "major"
-	Alpha = "alpha"
-	Rc    = "rc"
-	Beta  = "beta"
-	None  = ""
+	Patch   = "patch"
+	Minor   = "minor"
+	Major   = "major"
+	Alpha   = "alpha"
+	Rc      = "rc"
+	Beta    = "beta"
+	Release = ""
 )
 
 // Runs go mod download and then installs the binary.
@@ -49,13 +49,13 @@ func ldflags() string {
 		`-X "github.com/Mattel/project/proj.gitTag=%s"`, timestamp, hash, tag)
 }
 
-// tag returns the git tag for the current branch or "" if none.
+// tag returns the git tag for the current branch or "" if Release.
 func tag() string {
 	s, _ := sh.Output("git", "describe", "--tags")
 	return s
 }
 
-// hash returns the git hash for the current repo or "" if none.
+// hash returns the git hash for the current repo or "" if Release.
 func hash() string {
 	hash, _ := sh.Output("git", "rev-parse", "--short", "HEAD")
 	return hash
@@ -124,10 +124,11 @@ func ReleaseRc(version string) (err error) {
 		return err
 	}
 	versionSlice := strings.Split(newTag, "-")[0]
-
 	branchName := "release/" + versionSlice[:len(versionSlice)-2]
-	if err := sh.RunV("git", "checkout", "-b", branchName); err != nil {
-		return err
+	if err := sh.RunV("git", "checkout", "", branchName); err != nil {
+		if err := sh.RunV("git", "checkout", "-b", branchName); err != nil {
+			return err
+		}
 	}
 	defer func() {
 		if err != nil {
@@ -207,7 +208,7 @@ func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
 		return "", errors.New("invalid current tag")
 	}
 	releaseType = strings.ToLower(releaseType)
-	if releaseType != Beta && releaseType != Rc && releaseType != None && releaseType != Alpha {
+	if releaseType != Beta && releaseType != Rc && releaseType != Release && releaseType != Alpha {
 		return "", errors.New("invalid release type")
 	}
 	var releaseTag string
