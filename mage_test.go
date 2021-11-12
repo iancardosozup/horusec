@@ -4,21 +4,28 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/ZupIT/horusec/internal/utils/testutil"
 	"github.com/google/go-github/v40/github"
+	"github.com/magefile/mage/sh"
+	"github.com/stretchr/testify/assert"
 	"golang.org/x/mod/semver"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 const (
-	Patch     = "PATCH"
-	Minor     = "MINOR"
-	Major     = "MAJOR"
-	Alpha     = "ALPHA"
+	Patch     = "patch"
+	Minor     = "minor"
+	Major     = "major"
+	Alpha     = "alpha"
 	Rc        = "rc"
 	Beta      = "beta"
+	None      = ""
 	V001      = "v0.0.1"
 	V001RC1   = "v0.0.1-rc.1"
 	V001BETA1 = "v0.0.1-beta.1"
@@ -62,177 +69,172 @@ const (
 )
 
 func TestA(t *testing.T) {
-	//testcases := []struct {
-	//	name           string
-	//	input          string
-	//	releaseType    string
-	//	version        string
-	//	expectedOutput string
-	//}{
-	//	{
-	//		name:           "Should patch none v0.0.1 with success",
-	//		releaseType:    "",
-	//		version:        Patch,
-	//		input:          V001,
-	//		expectedOutput: V002,
-	//	},
-	//	{
-	//		name:           "Should patch rc v0.0.1 with success",
-	//		version:        Patch,
-	//		releaseType:    Rc,
-	//		input:          V001,
-	//		expectedOutput: V002RC1,
-	//	},
-	//	{
-	//		name:        "Should patch rc v0.0.1-rc.1 with success",
-	//		version:     Patch,
-	//		releaseType: Rc,
-	//		input:       V001RC1,
-	//		//TODO: expectedOutput should be V002RC1 or V001RC2?
-	//		expectedOutput: V001RC2,
-	//	},
-	//	{
-	//		name:           "Should patch beta v0.0.1 with success",
-	//		version:        Patch,
-	//		releaseType:    Beta,
-	//		input:          V001,
-	//		expectedOutput: V002BETA1,
-	//	}, {
-	//		name:        "Should patch beta v0.0.1-beta.1 with success",
-	//		version:     Patch,
-	//		releaseType: Beta,
-	//		input:       V001BETA1,
-	//		//TODO: expectedOutput should be V002BETA1 or V001BETA2?
-	//		expectedOutput: V001BETA2,
-	//	}, {
-	//		name:           "Should minor none v0.0.1 with success",
-	//		version:        Minor,
-	//		releaseType:    "",
-	//		input:          V001,
-	//		expectedOutput: V010,
-	//	},
-	//	{
-	//		name:           "Should minor rc v0.0.1 with success",
-	//		version:        Minor,
-	//		releaseType:    Rc,
-	//		input:          V001,
-	//		expectedOutput: V010RC1,
-	//	},
-	//	{
-	//		name:        "Should minor rc v0.0.1-rc.1 with success",
-	//		version:     Minor,
-	//		releaseType: Rc,
-	//		input:       V010RC1,
-	//		//TODO: expectedOutput should be V020RC1 or V010RC2?
-	//		expectedOutput: V020RC2,
-	//	},
-	//	{
-	//		name:           "Should minor beta v0.0.1 with success",
-	//		version:        Minor,
-	//		releaseType:    Beta,
-	//		input:          V001,
-	//		expectedOutput: V010BETA1,
-	//	}, {
-	//		name:           "Should Major none v0.0.1 with success",
-	//		version:        Major,
-	//		releaseType:    "",
-	//		input:          V001,
-	//		expectedOutput: V100,
-	//	},
-	//	{
-	//		name:           "Should Major rc v0.0.1 with success",
-	//		version:        Major,
-	//		releaseType:    Rc,
-	//		input:          V001,
-	//		expectedOutput: V100RC1,
-	//	},
-	//	{
-	//		name:           "Should Major beta v0.0.1 with success",
-	//		version:        Major,
-	//		releaseType:    Beta,
-	//		input:          V001,
-	//		expectedOutput: V100BETA1,
-	//	},
-	//	{
-	//		name:        "Should Major rc v0.0.1-rc.1 with success",
-	//		version:     Major,
-	//		releaseType: Rc,
-	//		input:       V001RC1,
-	//		//TODO: expectedOutput should be V100RC1 or V100RC2?
-	//		expectedOutput: V100RC2,
-	//	},
-	//	{
-	//		name:           "Should Major v0.0.1-rc.1 with success",
-	//		version:        Major,
-	//		releaseType:    "",
-	//		input:          V001RC1,
-	//		expectedOutput: V100,
-	//	},
-	//	{
-	//		name:           "Should minor v0.0.1-rc.1 with success",
-	//		version:        Minor,
-	//		releaseType:    "",
-	//		input:          V001RC1,
-	//		expectedOutput: V010,
-	//	},
-	//	{
-	//		name:           "Should patch v0.0.1-rc.1 with success",
-	//		version:        Patch,
-	//		releaseType:    "",
-	//		input:          V001RC1,
-	//		expectedOutput: V002,
-	//	},
-	//}
-	//for _, tt := range testcases {
-	//	t.Run(tt.name, func(t *testing.T) {
-	//
-	//		resp, err := getNewReleaseTag(tt.input, tt.version, tt.releaseType)
-	//		assert.NoError(t, err)
-	//		assert.Equal(t, tt.expectedOutput, resp)
-	//	})
-	//
-	//}
-	version := Major
+	testcases := []struct {
+		name           string
+		input          string
+		releaseType    string
+		version        string
+		expectedOutput string
+	}{
+		{
+			name:           "Should patch none v0.0.1 with success",
+			releaseType:    "",
+			version:        Patch,
+			input:          V001,
+			expectedOutput: V002,
+		},
+		{
+			name:           "Should patch rc v0.0.1 with success",
+			version:        Patch,
+			releaseType:    Rc,
+			input:          V001,
+			expectedOutput: V002RC1,
+		},
+		{
+			name:           "Should patch rc v0.0.1-rc.1 with success",
+			version:        Patch,
+			releaseType:    Rc,
+			input:          V001RC1,
+			expectedOutput: V001RC2,
+		},
+		{
+			name:           "Should patch beta v0.0.1 with success",
+			version:        Patch,
+			releaseType:    Beta,
+			input:          V001,
+			expectedOutput: V002BETA1,
+		}, {
+			name:        "Should patch beta v0.0.1-beta.1 with success",
+			version:     Patch,
+			releaseType: Beta,
+			input:       V001BETA1,
+			//TODO: expectedOutput should be V002BETA1 or V001BETA2?
+			expectedOutput: V001BETA2,
+		}, {
+			name:           "Should minor none v0.0.1 with success",
+			version:        Minor,
+			releaseType:    "",
+			input:          V001,
+			expectedOutput: V010,
+		},
+		{
+			name:           "Should minor rc v0.0.1 with success",
+			version:        Minor,
+			releaseType:    Rc,
+			input:          V001,
+			expectedOutput: V010RC1,
+		},
+		{
+			name:        "Should minor rc v0.0.1-rc.1 with success",
+			version:     Minor,
+			releaseType: Rc,
+			input:       V010RC1,
+			//TODO: expectedOutput should be V020RC1 or V010RC2?
+			expectedOutput: V020RC2,
+		},
+		{
+			name:           "Should minor beta v0.0.1 with success",
+			version:        Minor,
+			releaseType:    Beta,
+			input:          V001,
+			expectedOutput: V010BETA1,
+		}, {
+			name:           "Should Major none v0.0.1 with success",
+			version:        Major,
+			releaseType:    "",
+			input:          V001,
+			expectedOutput: V100,
+		},
+		{
+			name:           "Should Major rc v0.0.1 with success",
+			version:        Major,
+			releaseType:    Rc,
+			input:          V001,
+			expectedOutput: V100RC1,
+		},
+		{
+			name:           "Should Major beta v0.0.1 with success",
+			version:        Major,
+			releaseType:    Beta,
+			input:          V001,
+			expectedOutput: V100BETA1,
+		},
+		{
+			name:        "Should Major rc v0.0.1-rc.1 with success",
+			version:     Major,
+			releaseType: Rc,
+			input:       V001RC1,
+			//TODO: expectedOutput should be V100RC1 or V100RC2?
+			expectedOutput: V100RC2,
+		},
+		{
+			name:           "Should Major v0.0.1-rc.1 with success",
+			version:        Major,
+			releaseType:    "",
+			input:          V001RC1,
+			expectedOutput: V100,
+		},
+		{
+			name:           "Should minor v0.0.1-rc.1 with success",
+			version:        Minor,
+			releaseType:    "",
+			input:          V001RC1,
+			expectedOutput: V010,
+		},
+		{
+			name:           "Should patch v0.0.1-rc.1 with success",
+			version:        Patch,
+			releaseType:    "",
+			input:          V001RC1,
+			expectedOutput: V002,
+		},
+	}
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+
+			resp, err := getNewReleaseTag(tt.input, tt.version, tt.releaseType)
+			assert.NoError(t, err)
+			assert.Equal(t, tt.expectedOutput, resp)
+		})
+
+	}
+	version := Patch
 	tag, err := getLatestReleaseTag()
 	if err != nil {
 		t.Error(err)
 	}
 	fmt.Println(tag)
-	newTag, err := getNewReleaseTag(tag, version, Beta)
+	newTag, err := getNewReleaseTag(tag, version, Alpha)
 	if err != nil {
 		t.Error(err)
 	}
-	fmt.Println(newTag)
+	versionSlice := strings.Split(newTag, "-")[0]
+
+	branchName := "release/" + versionSlice[:len(versionSlice)-2]
+	fmt.Println(branchName)
 }
 
 func getLatestReleaseTag() (string, error) {
 	ghClient := github.NewClient(nil)
-	repo, resp, err := ghClient.Repositories.Get(context.Background(), "ZupIT", "horusec")
+	repo, resp, err := ghClient.Repositories.Get(context.Background(), "iancardosozup", "horusec")
 	if github.CheckResponse(resp.Response) != nil {
 		return "", err
 	}
 	req, err := http.NewRequest(http.MethodGet, strings.ReplaceAll(repo.GetReleasesURL(), `{/id}`, "/latest"), nil)
-	var releases github.RepositoryRelease
-	//date := time.Date(1999, time.May, 2, 1, 1, 1, 1, time.UTC)
-	//latestRelease := github.RepositoryRelease{
-	//	PublishedAt: &github.Timestamp{Time: date},
-	//}
-
-	resp, err = ghClient.Do(context.Background(), req, &releases)
-	//if github.CheckResponse(resp.Response) != nil {
-	//	return "", err
-	//}
-	//for _, release := range releases {
-	//	if semver.IsValid(strings.ReplaceAll(github.Stringify(release.Name), `"`, "")) {
-	//		latestRelease = release
-	//		break
-	//	}
-	//}
-	return strings.ReplaceAll(github.Stringify(releases.TagName), `"`, ""), err
+	var release github.RepositoryRelease
+	resp, err = ghClient.Do(context.Background(), req, &release)
+	if github.CheckResponse(resp.Response) != nil {
+		return "", err
+	}
+	return strings.ReplaceAll(github.Stringify(release.TagName), `"`, ""), err
 }
 func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
 	if !semver.IsValid(currentTag) {
 		return "", errors.New("invalid current tag")
+	}
+	releaseType = strings.ToLower(releaseType)
+	if releaseType != Beta && releaseType != Rc && releaseType != None && releaseType != Alpha {
+		return "", errors.New("invalid release type")
 	}
 	var releaseTag string
 	currentTag = strings.ReplaceAll(currentTag, "v", "")
@@ -242,16 +244,14 @@ func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
+	releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, minor, patch)
 	switch version {
 	case Patch:
 		patch = patch + 1
 		releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, minor, patch)
 		if releaseType == Rc {
-			patch = patch - 1
 			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Rc, nonOficialReleaseSlice, releaseTag, major, minor, patch)
 		} else if releaseType == Beta {
-			patch = patch - 1
 			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Beta, nonOficialReleaseSlice, releaseTag, major, minor, patch)
 		}
 	case Minor:
@@ -273,9 +273,12 @@ func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
 	case Alpha:
 		releaseTag = "alpha"
 	default:
-		return "", errors.New("invalid release type")
+		return "", fmt.Errorf("invalid version type, chose one: %q %q %q", Major, Minor, Patch)
 	}
-
+	err = os.Setenv("CLI_VERSION", releaseTag)
+	if err != nil {
+		return "", err
+	}
 	return releaseTag, nil
 }
 
@@ -322,4 +325,34 @@ func getNonOficialReleaseTagByCurrentTag(currentTag, releaseType string, nonOfic
 		releaseTag = fmt.Sprintf("%s%s%s.%d", releaseTag, "-", releaseType, 1)
 	}
 	return releaseTag, nil
+}
+
+func TestB(t *testing.T) {
+	newTag := Alpha
+
+	if err := sh.RunV("git", "tag", "-f", newTag, "-m", "release "+newTag); err != nil {
+		t.Error(err)
+	}
+	if err := sh.RunV("git", "push", "origin", "-f", newTag); err != nil {
+		t.Error(err)
+	}
+	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
+	os.Setenv("CLI_VERSION", newTag)
+	os.Setenv("CURRENT_DATE", time.Now().String())
+	os.Setenv("COSIGN_KEY_LOCATION", filepath.Join(testutil.RootPath, "cosign.key"))
+	os.Setenv("COSIGN_PWD", "123")
+	sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
+
+	envs := map[string]string{
+		"GORELEASER_PREVIOUS_TAG": os.Getenv("GORELEASER_PREVIOUS_TAG"),
+		"CURRENT_DATE":            os.Getenv("CURRENT_DATE"),
+		"COSIGN_KEY_LOCATION":     os.Getenv("COSIGN_KEY_LOCATION"),
+		"COSIGN_PWD":              os.Getenv("COSIGN_PWD"),
+	}
+	var result []string
+	for k, v := range envs {
+		if v == "" {
+			result = append(result, k)
+		}
+	}
 }
