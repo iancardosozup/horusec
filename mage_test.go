@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
 )
 
 const (
@@ -331,6 +332,7 @@ func getNonOficialReleaseTagByCurrentTag(currentTag, releaseType string, nonOfic
 }
 
 func TestB(t *testing.T) {
+
 	tag, err := getLatestTagByReleaseType("iancardosozup", "horusec", TypeRelease)
 	if err != nil {
 		t.Error(err)

@@ -6,25 +6,20 @@
 package main
 
 import (
-	"context"
-	"errors"
 	"fmt"
 	"github.com/ZupIT/horusec/internal/utils/testutil"
-	"github.com/google/go-github/v40/github"
-	"github.com/magefile/mage/mg"
 	"github.com/magefile/mage/sh"
-	"golang.org/x/mod/semver"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"time"
+	// mage:import
+	_ "github.com/ZupIT/horusec-devkit/pkg/utils/mageutils"
 )
 
 const (
-	Patch       = "patch"
-	Minor       = "minor"
-	Major       = "major"
+	Patch       = "Patch"
+	Minor       = "Minor"
+	Major       = "Major"
 	Alpha       = "alpha"
 	Rc          = "rc"
 	Beta        = "beta"
@@ -63,7 +58,6 @@ func hash() string {
 
 // ReleaseAlpha releases alpha version from main
 func ReleaseAlpha() error {
-	mg.Deps(verifyReleaseDeps)
 	newTag := Alpha
 
 	if err := sh.RunV("git", "tag", "-f", newTag, "-m", "release "+newTag); err != nil {
@@ -72,136 +66,120 @@ func ReleaseAlpha() error {
 	if err := sh.RunV("git", "push", "origin", "-f", newTag); err != nil {
 		return err
 	}
-	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
-	os.Setenv("CLI_VERSION", newTag)
-	os.Setenv("CURRENT_DATE", time.Now().String())
-	os.Setenv("COSIGN_KEY_LOCATION", filepath.Join(testutil.RootPath, "cosign.key"))
-	os.Setenv("COSIGN_PWD", "123")
+
 	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
 }
 
-// ReleaseBeta releases beta version
-func ReleaseBeta(version string) (err error) {
-	mg.Deps(verifyReleaseDeps)
-	tag, err := getLatestReleaseTag("iancardosozup", "horusec", Beta)
+//// ReleaseBeta releases beta version
+//func ReleaseBeta(version string) (err error) {
+//	mg.SerialDeps(verifyReleaseDeps)
+//
+//	newVersion, err := mage.NewVersion(version)
+//	if err != nil {
+//		return err
+//	}
+//	newTag := newVersion.NextBetaVersion
+//	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release "+newTag); err != nil {
+//		return err
+//	}
+//	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
+//		return err
+//	}
+//	defer func() {
+//		if err != nil {
+//			sh.RunV("git", "tag", "--delete", newTag)
+//			sh.RunV("git", "push", "--delete", "origin", newTag)
+//		}
+//	}()
+//	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
+//}
 
-	if err != nil {
-		return err
-	}
-	newTag, err := getNewReleaseTag(tag, version, Beta)
-	if err != nil {
-		return err
-	}
-	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release "+newTag); err != nil {
-		return err
-	}
-	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			sh.RunV("git", "tag", "--delete", newTag)
-			sh.RunV("git", "push", "--delete", "origin", newTag)
-		}
-	}()
-	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
-	os.Setenv("CLI_VERSION", newTag)
-	os.Setenv("CURRENT_DATE", time.Now().String())
-	os.Setenv("COSIGN_KEY_LOCATION", filepath.Join(testutil.RootPath, "cosign.key"))
-	os.Setenv("COSIGN_PWD", "123")
-	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
-}
+//// ReleaseRc creates a release branch and a release candidate tag
+//func ReleaseRc(version string) (err error) {
+//	mg.Deps(verifyReleaseDeps)
+//	var isReleaseBranchNew bool
+//	tag, err := getLatestReleaseTag("iancardosozup", "horusec", Rc)
+//	if err != nil {
+//		return err
+//	}
+//	newTag, err := getNewReleaseTag(tag, version, Rc)
+//	if err != nil {
+//		return err
+//	}
+//	branchName := "rc/" + newTag[:4]
+//	if err := sh.RunV("git", "checkout", branchName); err != nil {
+//		isReleaseBranchNew = true
+//		if err := sh.RunV("git", "checkout", "-b", branchName); err != nil {
+//			return err
+//		}
+//	}
+//
+//	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release candidate"); err != nil {
+//		return err
+//	}
+//	defer func() {
+//		if err != nil {
+//			sh.RunV("git", "checkout", "main")
+//			sh.RunV("git", "tag", "--delete", newTag)
+//			sh.RunV("git", "push", "--delete", "origin", newTag)
+//			if isReleaseBranchNew {
+//				sh.RunV("git", "branch", "-d", branchName)
+//				sh.RunV("git", "push", "origin")
+//			}
+//		}
+//	}()
+//	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
+//		return err
+//	}
+//	if err := sh.RunV("git", "push", "origin", branchName); err != nil {
+//		return err
+//	}
+//	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
+//}
 
-// ReleaseRc creates a release branch and a release candidate tag
-func ReleaseRc(version string) (err error) {
-	mg.Deps(verifyReleaseDeps)
-	var isReleaseBranchNew bool
-	tag, err := getLatestReleaseTag("iancardosozup", "horusec", Rc)
-	if err != nil {
-		return err
-	}
-	newTag, err := getNewReleaseTag(tag, version, Rc)
-	if err != nil {
-		return err
-	}
-	branchName := "rc/" + newTag[:4]
-	if err := sh.RunV("git", "checkout", branchName); err != nil {
-		isReleaseBranchNew = true
-		if err := sh.RunV("git", "checkout", "-b", branchName); err != nil {
-			return err
-		}
-	}
-
-	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release candidate"); err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			sh.RunV("git", "checkout", "main")
-			sh.RunV("git", "tag", "--delete", newTag)
-			sh.RunV("git", "push", "--delete", "origin", newTag)
-			if isReleaseBranchNew {
-				sh.RunV("git", "branch", "-d", branchName)
-				sh.RunV("git", "push", "origin")
-			}
-		}
-	}()
-	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
-		return err
-	}
-	if err := sh.RunV("git", "push", "origin", branchName); err != nil {
-		return err
-	}
-	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
-	os.Setenv("CLI_VERSION", newTag)
-	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
-}
-
-//Release creates a release by the release branch
-func Release(version string) (err error) {
-	mg.Deps(verifyReleaseDeps)
-	var isNewReleaseBranch bool
-	tag, err := getLatestReleaseTag("iancardosozup", "horusec", TypeRelease)
-	if err != nil {
-		return err
-	}
-	newTag, err := getNewReleaseTag(tag, version, TypeRelease)
-	if err != nil {
-		return err
-	}
-	rcBranchName := "rc/" + newTag[:4]
-	if err := sh.RunV("git", "checkout", rcBranchName); err != nil {
-		return err
-	}
-	releaseBranchName := "release/" +  newTag[:4]
-	if err := sh.RunV("git", "checkout", releaseBranchName); err != nil {
-		isNewReleaseBranch = true
-		if err := sh.RunV("git", "checkout", "-b", releaseBranchName); err != nil {
-			return err
-		}
-	}
-	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release"); err != nil {
-		return err
-	}
-	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			sh.RunV("git", "checkout", "main")
-			sh.RunV("git", "tag", "--delete", newTag)
-			sh.RunV("git", "push", "--delete", "origin", newTag)
-			if isNewReleaseBranch {
-				sh.RunV("git", "checkout", "main")
-				sh.RunV("git", "branch", "-d", releaseBranchName)
-				sh.RunV("git", "push", "origin")
-			}
-		}
-	}()
-	os.Setenv("GORELEASER_PREVIOUS_TAG", newTag)
-	os.Setenv("CLI_VERSION", newTag)
-	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
-}
+////Release creates a release by the release branch
+//func Release(version string) (err error) {
+//	mg.Deps(verifyReleaseDeps)
+//	var isNewReleaseBranch bool
+//	tag, err := getLatestReleaseTag("iancardosozup", "horusec", TypeRelease)
+//	if err != nil {
+//		return err
+//	}
+//	newTag, err := getNewReleaseTag(tag, version, TypeRelease)
+//	if err != nil {
+//		return err
+//	}
+//	rcBranchName := "rc/" + newTag[:4]
+//	if err := sh.RunV("git", "checkout", rcBranchName); err != nil {
+//		return err
+//	}
+//	releaseBranchName := "release/" + newTag[:4]
+//	if err := sh.RunV("git", "checkout", releaseBranchName); err != nil {
+//		isNewReleaseBranch = true
+//		if err := sh.RunV("git", "checkout", "-b", releaseBranchName); err != nil {
+//			return err
+//		}
+//	}
+//	if err := sh.RunV("git", "tag", "-a", newTag, "-m", "release"); err != nil {
+//		return err
+//	}
+//	if err := sh.RunV("git", "push", "origin", newTag); err != nil {
+//		return err
+//	}
+//	defer func() {
+//		if err != nil {
+//			sh.RunV("git", "checkout", "main")
+//			sh.RunV("git", "tag", "--delete", newTag)
+//			sh.RunV("git", "push", "--delete", "origin", newTag)
+//			if isNewReleaseBranch {
+//				sh.RunV("git", "checkout", "main")
+//				sh.RunV("git", "branch", "-d", releaseBranchName)
+//				sh.RunV("git", "push", "origin")
+//			}
+//		}
+//	}()
+//	return sh.Run("goreleaser", "-f", filepath.Join(testutil.RootPath, "goreleaser.yml"), "--rm-dist")
+//}
 
 func verifyReleaseDeps() error {
 	err := hasAllNecessaryEnvs()
@@ -229,126 +207,4 @@ func hasAllNecessaryEnvs() error {
 		return fmt.Errorf("Missing some env var: %v", result)
 	}
 	return nil
-}
-func getLatestReleaseTag(org, project, releasetype string) (string, error) {
-	if releasetype != Beta && releasetype != Alpha && releasetype != Rc && releasetype != TypeRelease {
-		return "", fmt.Errorf("invalid release type, choose between %q %q %q %q", Alpha, Beta, Rc, TypeRelease)
-	}
-	ghClient := github.NewClient(nil)
-	listOptions := &github.ListOptions{
-		Page:    1,
-		PerPage: 80,
-	}
-	tags, resp, err := ghClient.Repositories.ListTags(context.Background(), org, project, listOptions)
-	if github.CheckResponse(resp.Response) != nil {
-		return "", err
-	}
-	var latestTagName string
-	for _, tag := range tags {
-		if strings.Contains(tag.GetName(), releasetype) && releasetype != TypeRelease {
-			latestTagName = tag.GetName()
-			break
-		} else if !strings.Contains(tag.GetName(), Beta) && !strings.Contains(tag.GetName(), Alpha) && !strings.Contains(tag.GetName(), Rc) {
-			latestTagName = tag.GetName()
-			break
-		}
-	}
-	return strings.ReplaceAll(latestTagName, `"`, ""), err
-}
-
-func getNewReleaseTag(currentTag, version, releaseType string) (string, error) {
-	if !semver.IsValid(currentTag) {
-		return "", errors.New("invalid current tag")
-	}
-	releaseType = strings.ToLower(releaseType)
-	if releaseType != Beta && releaseType != Rc && releaseType != TypeRelease && releaseType != Alpha {
-		return "", errors.New("invalid release type")
-	}
-	var releaseTag string
-	currentTag = strings.ReplaceAll(currentTag, "v", "")
-	versionSlice := strings.Split(currentTag, ".")
-
-	nonOficialReleaseSlice, major, minor, patch, err := getSemverValues(currentTag, versionSlice)
-	if err != nil {
-		return "", err
-	}
-	releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, minor, patch)
-	switch version {
-	case Patch:
-		patch = patch + 1
-		releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, minor, patch)
-		if releaseType == Rc {
-			patch = patch - 1
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Rc, nonOficialReleaseSlice, releaseTag, major, minor, patch)
-		} else if releaseType == Beta {
-			patch = patch - 1
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Beta, nonOficialReleaseSlice, releaseTag, major, minor, patch)
-		}
-	case Minor:
-		minor = minor + 1
-		releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, minor, 0)
-		if releaseType == Rc {
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Rc, nonOficialReleaseSlice, releaseTag, major, minor, 0)
-		} else if releaseType == Beta {
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Beta, nonOficialReleaseSlice, releaseTag, major, minor, 0)
-		}
-	case Major:
-		major = major + 1
-		releaseTag = fmt.Sprintf("%s%d.%d.%d", "v", major, 0, 0)
-		if releaseType == Rc {
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Rc, nonOficialReleaseSlice, releaseTag, major, 0, 0)
-		} else if releaseType == Beta {
-			releaseTag, err = getNonOficialReleaseTagByCurrentTag(currentTag, Beta, nonOficialReleaseSlice, releaseTag, major, 0, 0)
-		}
-	case Alpha:
-		releaseTag = "alpha"
-	default:
-		return "", fmt.Errorf("invalid version type, chose one: %q %q %q", Major, Minor, Patch)
-	}
-
-	return releaseTag, nil
-}
-func getSemverValues(currentTag string, versionSlice []string) (nonOficialReleaseSlice []string, major int, minor int, patch int, err error) {
-	if strings.Contains(currentTag, "-") {
-		nonOficialReleaseSlice = strings.Split(currentTag, "-")
-		patchSlice := strings.Split(nonOficialReleaseSlice[0], ".")
-		patch, err = strconv.Atoi(patchSlice[len(patchSlice)-1])
-		if err != nil {
-			return nil, 0, 0, 0, err
-		}
-
-	} else {
-		patch, err = strconv.Atoi(versionSlice[2])
-		if err != nil {
-			return nil, 0, 0, 0, err
-		}
-	}
-	major, err = strconv.Atoi(versionSlice[0])
-	if err != nil {
-		return nil, 0, 0, 0, err
-	}
-	minor, err = strconv.Atoi(versionSlice[1])
-	if err != nil {
-		return nil, 0, 0, 0, err
-	}
-	return nonOficialReleaseSlice, major, minor, patch, nil
-}
-
-func getNonOficialReleaseTagByCurrentTag(currentTag, releaseType string, nonOficialReleaseSlice []string, releaseTag string, major int, minor int, patch int) (string, error) {
-	if releaseType != Beta && releaseType != Rc {
-		return "", fmt.Errorf("invalid release type: choose %q or %q", Beta, Rc)
-	}
-	if nonOficialReleaseSlice != nil {
-		result := strings.Split(nonOficialReleaseSlice[1], ".")
-		if result[len(result)-1] != "" {
-			releaseTypeAttempt, err := strconv.Atoi(result[len(result)-1])
-			if err != nil {
-				return "", err
-			}
-			releaseTag = fmt.Sprintf("%s%d.%d.%d-%s.%d", "v", major, minor, patch, releaseType, releaseTypeAttempt+1)
-		}
-	} else {
-		releaseTag = fmt.Sprintf("%s%s%s.%d", releaseTag, "-", releaseType, 1)
-	}
-	return releaseTag, nil
 }
