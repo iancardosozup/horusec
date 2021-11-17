@@ -3,7 +3,7 @@ module github.com/ZupIT/horusec
 go 1.17
 
 require (
-	github.com/ZupIT/horusec-devkit v1.0.20-0.20211117175928-75fb3e872b4f
+	github.com/ZupIT/horusec-devkit v1.0.20-0.20211117202010-e985e9daaa25
 	github.com/ZupIT/horusec-engine v0.3.6
 	github.com/bmatcuk/doublestar/v4 v4.0.2
 	github.com/briandowns/spinner v1.16.0

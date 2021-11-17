@@ -26,6 +26,14 @@ const (
 	TypeRelease = "release"
 )
 
+//GetCurrentDate execute "echo", `::set-output name=date::$(date "+%a %b %d %H:%M:%S %Y")`
+func GetCurrentDate() error {
+	if err := sh.RunV("echo", `::set-output name=date::$(date "+%a %b %d %H:%M:%S %Y")`); err != nil {
+		return err
+	}
+	return nil
+}
+
 // Runs go mod download and then installs the binary.
 func Build() error {
 	sh.RunV("go", "mod", "download")
