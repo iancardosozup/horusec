@@ -3,7 +3,7 @@ module github.com/ZupIT/horusec
 go 1.17
 
 require (
-	github.com/ZupIT/horusec-devkit v1.0.20-0.20211117175928-75fb3e872b4f
+	github.com/ZupIT/horusec-devkit v1.0.20-0.20211118133831-9063ae50b89c
 	github.com/ZupIT/horusec-engine v0.3.6
 	github.com/bmatcuk/doublestar/v4 v4.0.2
 	github.com/briandowns/spinner v1.16.0
@@ -12,7 +12,6 @@ require (
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gocarina/gocsv v0.0.0-20210516172204-ca9e8a8ddea8
 	github.com/golang/mock v1.6.0
-	github.com/google/go-github/v40 v40.0.0
 	github.com/google/uuid v1.3.0
 	github.com/iancoleman/strcase v0.2.0
 	github.com/magefile/mage v1.11.0
@@ -26,7 +25,6 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.9.0
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/mod v0.4.2
 )
 
 require (
@@ -43,8 +41,8 @@ require (
 	github.com/go-enry/go-oniguruma v1.2.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/google/go-github/v40 v40.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/google/martian/v3 v3.2.1 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/magiconair/properties v1.8.5 // indirect
