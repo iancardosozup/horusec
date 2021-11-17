@@ -28,8 +28,6 @@ jobs:
     env:
       COSIGN_KEY_LOCATION: /tmp/cosign.key
       COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
-      HORUSEC_REPOSITORY_ORG: iancardosozup
-      HORUSEC_REPOSITORY_NAME: horusec
 
 
     steps:
@@ -50,13 +48,15 @@ jobs:
       - name: Cosign Installer
         uses: sigstore/cosign-installer@main
         with:
-          cosign-release: 'v1.3.0'
+          cosign-release: 'v1.2.0'
+
+      - name: Install Mage
+        run: go install github.com/magefile/mage@07afc7d24f4d6d6442305d49552f04fbda5ccb3e
 
       - name: Get current date
         id: date
-        run: echo "::set-output name=date::$(date "+%a %b %d %H:%M:%S %Y")"
-      - name: Install Mage
-        run: go install github.com/magefile/mage@07afc7d24f4d6d6442305d49552f04fbda5ccb3e
+        run: mage -v getCurrentDate
+
       - name: Git config
         run: mage -v defaultGitConfig
 
@@ -68,7 +68,7 @@ jobs:
       - name: Version increment
         id: updated-version
         run: |
-          mage -v upVersion ${{ github.event.inputs.releaseType }}
+          mage -v upVersions ${{ github.event.inputs.releaseType }}
         env:
           HORUSEC_REPOSITORY_ORG: ${{ github.repository_owner }}
           HORUSEC_REPOSITORY_NAME: ${{ github.event.repository.name }}
@@ -90,9 +90,3 @@ jobs:
 
       - name: Push updates
         run: mage -v gitPushAll
-#      - name: Release
-#        run:
-#            mage -v releasebeta  ${{ github.event.inputs.releaseType }}
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#          CURRENT_DATE: ${{ steps.date.outputs.date }}
