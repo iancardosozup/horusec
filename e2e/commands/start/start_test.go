@@ -237,8 +237,8 @@ var _ = Describe("running binary Horusec with start parameter", func() {
 	When("--return-error is passed", func() {
 		BeforeEach(func() {
 			flags = map[string]string{
-				testutil.StartFlagProjectPath:   projectPath,
-				testutil.StartFlagReturnError:   "true",
+				testutil.StartFlagProjectPath: projectPath,
+				testutil.StartFlagReturnError: "true",
 			}
 		})
 
@@ -287,7 +287,7 @@ var _ = Describe("running binary Horusec with start parameter", func() {
 
 		BeforeEach(func() {
 			flags = map[string]string{
-				testutil.StartFlagProjectPath:   projectPath,
+				testutil.StartFlagProjectPath:    projectPath,
 				testutil.StartFlagRepositoryName: repositoryName,
 			}
 		})

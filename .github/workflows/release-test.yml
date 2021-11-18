@@ -1,0 +1,52 @@
+# Copyright 2021 ZUP IT SERVICOS EM TECNOLOGIA E INOVACAO SA
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+name: potato
+on:
+  push:
+permissions: read-all
+jobs:
+  Rc:
+    permissions:
+      contents: write
+      packages: write
+    runs-on: ubuntu-latest
+    env:
+      COSIGN_KEY_LOCATION: /tmp/cosign.key
+      COSIGN_PWD: ${{ secrets.COSIGN_PWD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: Install Mage
+        run: go install github.com/magefile/mage@v1.11
+      - name: Set the value
+        id: step_one
+        run: |
+          echo "action_state=yellow" >> $GITHUB_ENV
+      - name: Use the value
+        id: step_two
+        run: |
+          echo "${{ env.action_state }}" # This will output 'yellow'
+      - name: Set the value
+        id: set_potato
+        run: |
+          mage -v setPotatoVariable
+      - name: Use the value
+        id: use_potato
+        run: |
+          echo "${{ env.potato }}" # This will output 'fried_potato'
